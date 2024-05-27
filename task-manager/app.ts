@@ -1,4 +1,5 @@
-import express, { json } from 'express'
+import express from 'express'
+import path from 'path'
 
 import sequelize from './sequelize'
 import taskRoutes from './routes/tasks'
@@ -7,9 +8,20 @@ const port = 8080
 const app = express()
 
 // middleware
-app.use(json())
+app.use(express.static('./public'))
+app.use(express.json())
+app.set('view engine', 'ejs')
+app.set('views', path.join(__dirname, '../views'))
 
 // routes
+app.get('/', (req, res) => {
+  res.render('index')
+})
+
+app.get('/task', (req, res) => {
+  res.render('task')
+})
+
 app.use('/api/v1/tasks', taskRoutes)
 
 app.listen(port, async () => {
