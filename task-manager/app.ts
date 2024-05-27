@@ -3,6 +3,8 @@ import path from 'path'
 
 import sequelize from './sequelize'
 import taskRoutes from './routes/tasks'
+import notFound from './middleware/not-found'
+import errorHandler from './middleware/error-handler'
 
 const port = 8080
 const app = express()
@@ -23,6 +25,8 @@ app.get('/task', (req, res) => {
 })
 
 app.use('/api/v1/tasks', taskRoutes)
+app.use(notFound)
+app.use(errorHandler)
 
 app.listen(port, async () => {
   try {
