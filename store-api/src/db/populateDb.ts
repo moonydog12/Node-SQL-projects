@@ -17,16 +17,16 @@ async function populateDb() {
     await client.connect();
 
     // Iterate through each product and insert into the database
-    for (const product of data) {
+    data.map(async (product) => {
       const { name, price, company, rating = 4.5, featured = false } = product;
       const query = {
-        text: 'INSERT INTO product(name, price, company, rating, featured) VALUES($1, $2, $3, $4, $5)',
+        text: 'INSERT INTO products(product_name, product_price, product_company, product_rating, product_featured) VALUES($1, $2, $3, $4, $5)',
         values: [name, price, company, rating, featured],
       };
 
       await client.query(query);
       console.log(`Inserted product: ${name}`);
-    }
+    });
 
     console.log('All products inserted successfully.');
   } catch (error) {

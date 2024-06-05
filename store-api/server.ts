@@ -1,4 +1,4 @@
-import express, { Request, Response, urlencoded } from 'express';
+import express from 'express';
 import dotenv from 'dotenv';
 import sequelize from './src/db';
 import 'express-async-errors';
@@ -12,7 +12,7 @@ const port = process.env.PORT;
 
 // middleware
 app.use(express.json());
-app.use(urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false }));
 
 // routes
 app.use('/api/v1/products', productsRouter);
