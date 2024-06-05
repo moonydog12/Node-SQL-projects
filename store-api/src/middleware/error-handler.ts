@@ -5,7 +5,7 @@ function errorHandlerMiddleware(
   err: Error,
   req: Request,
   res: Response,
-  _next: NextFunction,
+  next: NextFunction,
 ) {
   // 如果err 是 CustomAPIError 的子代(繼承了定義在其中的屬性)，回傳自定義 json 格式
   if (err instanceof CustomAPIError) {

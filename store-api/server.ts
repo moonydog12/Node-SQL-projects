@@ -1,9 +1,9 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, urlencoded } from 'express';
 import dotenv from 'dotenv';
+import sequelize from './src/db';
 import 'express-async-errors';
 import notFoundMiddleware from './src/middleware/not-found';
 import errorHandlerMiddleware from './src/middleware/error-handler';
-import client from './src/db';
 import productsRouter from './src/routes/products';
 
 dotenv.config();
@@ -12,25 +12,18 @@ const port = process.env.PORT;
 
 // middleware
 app.use(express.json());
+app.use(urlencoded({ extended: false }));
 
 // routes
-app.get('/', async (req: Request, res: Response) => {
-  const result = await client.query('SELECT * FROM tasks');
-  res.send(result.rows);
-});
-
 app.use('/api/v1/products', productsRouter);
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
 async function startServer() {
-  try {
-    app.listen(port);
-    await client.connect();
-    console.log(`Listeining on port ${port}`);
-  } catch (error) {
-    console.log(error);
-  }
+  await sequelize.authenticate();
+  app.listen(port, () => {
+    console.log(`Listening on port ${port}`);
+  });
 }
 
 startServer();

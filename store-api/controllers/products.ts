@@ -1,7 +1,5 @@
-import { Request, Response } from 'express'
+import { Request, Response } from 'express';
 
-const getAllProductsStatic = async (req: Request, res: Response) => {
-  res.status(200).json({ msg: 'products testing route' })
-}
+async function getAllProducts(req: Request, res: Response) {}
 
-export { getAllProductsStatic }
+export { getAllProducts };
