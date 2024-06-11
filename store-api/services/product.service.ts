@@ -1,26 +1,80 @@
 import { Op, WhereOptions } from 'sequelize';
 import Product from '../src/db/schemas/product.schema';
 
-// 定義請求參數的介面
 interface ProductData {
-  featured: string;
-  company: string;
-  name: string;
-  sort: string;
+  id?: string;
+  price?: string;
+  name?: string;
+  featured?: string;
+  rating?: string;
+  company?: string;
+  sort?: string;
+  field?: string;
+  page?: string;
+  limit?: string;
+  numericFilters?: string;
+}
+
+interface Dictionary {
+  [key: string]: string;
 }
 
 class ProductService {
-  // 構建排序列表
-  private static buildOrderList(sort: string | undefined): [string, string][] {
-    // 定義排序順序的字典
-    const sortOrderMap: { [key: string]: string } = {
-      price: 'ASC',
-      name: 'ASC',
-    };
+  #fieldDictionary: Dictionary = {
+    id: 'product_id',
+    price: 'product_price',
+    name: 'product_name',
+    featured: 'product_featured',
+    rating: 'product_rating',
+    company: 'product_company',
+  };
 
+  #operatorMap = {
+    '>': Op.gt,
+    '>=': Op.gte,
+    '=': Op.eq,
+    '<': Op.lt,
+    '<=': Op.lte,
+  };
+
+  // 解析數字篩選器
+  private parseNumericFilters(
+    numericFilters: string | undefined,
+  ): WhereOptions {
+    const queryObj: WhereOptions = {};
+
+    if (!numericFilters) return {};
+
+    const filters = numericFilters.split(',');
+    filters.forEach((filter) => {
+      const [fieldName, operator, value] = filter.split(/\b(<|>|>=|=|<|<=)\b/);
+
+      // 確保篩選器中使用的欄位名稱和操作符是有效的
+      if (
+        !Object.prototype.hasOwnProperty.call(this.#fieldDictionary, fieldName)
+      ) {
+        throw new Error(`Invalid filedName: ${fieldName}`);
+      }
+
+      const fieldKey = this.#fieldDictionary[fieldName];
+      const opSymbol = this.#operatorMap[operator];
+      if (!opSymbol) {
+        throw new Error(`Invalid operator: ${operator}`);
+      }
+
+      // 將篩選條件添加到查詢對象中
+      queryObj[fieldKey] = {
+        [opSymbol]: Number(value),
+      };
+    });
+
+    return queryObj;
+  }
+
+  // 構建排序列表
+  private buildOrderList(sort: string | undefined): [string, string][] {
     const orderList: [string, string][] = [];
 
-    // 解析排序參數並構建排序列表
     if (sort) {
       const sortFields = sort.split(',');
 
@@ -30,49 +84,65 @@ class ProductService {
         const fieldName = isDescending ? trimmedField.slice(1) : trimmedField;
 
         // 確保排序欄位有效並對應到字典中的排序方式
-        if (Object.prototype.hasOwnProperty.call(sortOrderMap, fieldName)) {
-          orderList.push([
-            `product_${fieldName}`,
+        if (
+          Object.prototype.hasOwnProperty.call(this.#fieldDictionary, fieldName)
+        ) {
+          // 將排序欄位名稱和排序方向添加到排序列表中
+          const sortOrder: [string, string] = [
+            this.#fieldDictionary[fieldName],
             isDescending ? 'DESC' : 'ASC',
-          ]);
+          ];
+          orderList.push(sortOrder);
         }
       });
     }
 
-    // 如果排序列表為空，則添加默認排序條件
     if (orderList.length === 0) {
+      // 如果排序列表為空，則預設按照 createdAt 排序
       orderList.push(['createdAt', 'DESC']);
     }
 
     return orderList;
   }
 
-  // 獲取所有產品
-  static async getAll(data: ProductData) {
-    const { featured, company, name, sort } = data;
-    const queryObj: WhereOptions = {};
+  // 查詢並返回符合條件的產品列表
+  async getAll(data: ProductData) {
+    const {
+      numericFilters,
+      sort,
+      page = '1',
+      limit = '10',
+      ...otherData
+    } = data;
 
-    if (featured) {
-      queryObj.product_featured = featured === 'true';
-    }
-    if (company) {
-      queryObj.product_company = company as string;
-    }
-    if (name) {
-      // 使用 Sequelize 的 Op.iLike 進行模糊搜索
-      queryObj.product_name = {
-        [Op.iLike]: `%${name}%`,
-      };
-    }
+    const pageNumber = Number(page) || 1;
+    const limitNumber = Number(limit) || 10;
+    const offsetNumber = (pageNumber - 1) * limitNumber;
 
-    // 查詢並返回符合條件的產品列表
+    const queryObj: WhereOptions = {
+      ...this.parseNumericFilters(numericFilters),
+      ...Object.keys(otherData).reduce((acc: WhereOptions, key: string) => {
+        const fieldKey = this.#fieldDictionary[key];
+        if (fieldKey) {
+          acc[fieldKey] = otherData[key];
+        }
+        return acc;
+      }, {}),
+    };
+
+    const orderList = this.buildOrderList(sort);
+
     const products = await Product.findAll({
       where: queryObj,
-      order: ProductService.buildOrderList(sort as string),
+      order: orderList,
+      limit: limitNumber,
+      offset: offsetNumber,
     });
 
     return products;
   }
 }
 
-export default ProductService;
+const productService = new ProductService();
+
+export default productService;

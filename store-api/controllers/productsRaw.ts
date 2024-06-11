@@ -1,66 +1,84 @@
 import { Request, Response } from 'express';
-import sequelize from '../src/db';
+import pg from 'pg';
 
 async function getAllProductsRaw(req: Request, res: Response) {
-  const { featured, company, name, sort } = req.query;
-  let whereClause = '';
-  const replacements: { [key: string]: any } = {};
+  const pool = new pg.Pool({
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DATABASE,
+    password: process.env.PG_PASSWD,
+  });
 
-  // 構建 WHERE 子句
+  const { featured, company, name, sort, numericFilters } = req.query;
+  const whereClauses = [];
+  const replacements: any[] = [];
+
+  // 構建 WHERE 子句和相應的參數
   if (featured) {
-    // 如果有 featured 參數，則添加到 WHERE 子句中
-    whereClause += 'product_featured = :featured ';
-    replacements.featured = featured === 'true';
+    whereClauses.push(`product_featured = $${replacements.length + 1}`);
+    replacements.push(featured === 'true');
   }
   if (company) {
-    // 如果有 company 參數，則添加到 WHERE 子句中
-    whereClause += 'AND product_company = :company ';
-    replacements.company = company;
+    whereClauses.push(`product_company = $${replacements.length + 1}`);
+    replacements.push(company);
   }
   if (name) {
-    // 如果有 name 參數，則添加到 WHERE 子句中（ILIKE 用於模糊搜索）
-    whereClause += 'AND product_name ILIKE :name ';
-    replacements.name = `%${name}%`;
+    whereClauses.push(`product_name ILIKE $${replacements.length + 1}`);
+    replacements.push(`%${name}%`);
+  }
+  if (numericFilters) {
+    const filters = numericFilters.split(',');
+    filters.forEach((filter) => {
+      const [fieldName, operator, value] = filter.split(/\b(<|>|>=|=|<|<=)\b/);
+      whereClauses.push(`${fieldName} ${operator} $${replacements.length + 1}`);
+      replacements.push(Number(value));
+    });
   }
 
-  // 定義排序欄位和它們對應的資料庫欄位的字典
+  // 構建 ORDER BY 子句
   const sortOrderMap: { [key: string]: string } = {
     price: 'product_price',
     name: 'product_name',
   };
 
-  // 解析多個排序條件
-  let sortFields;
-  if (sort) {
-    sortFields = (sort as string).split(',');
-  }
-
-  // 構建 ORDER BY 子句
   let orderByClause = 'ORDER BY ';
-  if (sortFields && sortFields.length > 0) {
-    sortFields.forEach((sortField: string, index: number) => {
-      const isDescending = sortField.startsWith('-');
-      const fieldName = isDescending ? sortField.slice(1) : sortField;
-      const sortDirection = isDescending ? 'DESC' : 'ASC';
-      const resolvedSortField = sortOrderMap[fieldName];
-
-      orderByClause += `${
-        index > 0 ? ', ' : ''
-      }${resolvedSortField} ${sortDirection}`;
-    });
+  if (sort) {
+    const sortFields = (sort as string).split(',');
+    orderByClause += sortFields
+      .map((sortField) => {
+        const isDescending = sortField.startsWith('-');
+        const fieldName = isDescending ? sortField.slice(1) : sortField;
+        const sortDirection = isDescending ? 'DESC' : 'ASC';
+        const resolvedSortField = sortOrderMap[fieldName];
+        return `"${resolvedSortField}" ${sortDirection}`;
+      })
+      .join(', ');
   } else {
     orderByClause += '"createdAt"';
   }
 
+  // 構建 SQL 查詢
+  const whereClause =
+    whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
   const query = `
     SELECT *
     FROM products
-    ${whereClause ? `WHERE ${whereClause}` : ''}
+    ${whereClause}
     ${orderByClause}
   `;
 
-  const products = await sequelize.query(query, { replacements });
-  res.status(200).json({ products, count: products.length });
+  try {
+    // 執行 SQL 查詢
+    const result = await pool.query(query, replacements);
+    const products = result.rows; // 取得結果行
+
+    res.status(200).json({ products, count: products.length });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    // 釋放資源
+    await pool.end();
+  }
 }
 
 export { getAllProductsRaw };

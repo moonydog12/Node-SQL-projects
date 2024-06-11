@@ -64,9 +64,4 @@ const Product = sequelize.define(
   },
 );
 
-export const start = async () => {
-  await sequelize.sync({ force: true });
-  console.log('test');
-};
-
 export default Product;

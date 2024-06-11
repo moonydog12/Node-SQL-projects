@@ -5,7 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint ./src --ext .ts",
-    "start": "nodemon ./dist/server.js"
+    "start": "nodemon ./dist/server.js",
+    "ts-watch": "tsc --watch"
   },
   "keywords": [],
   "author": "",
