@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { CustomAPIError } from '../errors/custom-error';
+import { StatusCodes } from 'http-status-codes';
+import { CustomAPIError } from '../errors';
 
 function errorHandlerMiddleware(
   err: Error,
@@ -12,8 +13,8 @@ function errorHandlerMiddleware(
     return res.status(err.statusCode).json({ msg: err.message });
   }
   return res
-    .status(500)
-    .json({ msg: 'Something went wrong,please try again', err: err.message });
+    .status(StatusCodes.INTERNAL_SERVER_ERROR)
+    .json({ msg: 'Something went wrong,please try again' });
 }
 
 export default errorHandlerMiddleware;

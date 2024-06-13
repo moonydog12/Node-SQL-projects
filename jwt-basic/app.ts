@@ -3,6 +3,7 @@ import 'express-async-errors';
 import express from 'express';
 import notFoundMiddleware from './middleware/not-found';
 import errorHandlerMiddleware from './middleware/error-handler';
+import mainRouter from './routes';
 
 const app = express();
 dotenv.config();
@@ -11,6 +12,7 @@ dotenv.config();
 app.use(express.static('./public'));
 app.use(express.json());
 
+app.use('/api/v1', mainRouter);
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
