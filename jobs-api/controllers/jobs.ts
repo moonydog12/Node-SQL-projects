@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
-import query from '../db';
 import UserModel from '../models/User';
 
 async function getAllJobs(req: Request, res: Response) {
-  const user = await UserModel.findByEmail('losididog@gmail.com');
-  res.send({ user });
+  const users = await UserModel.getAll();
+  res.send({ users });
 }
 
 async function getJob(req: Request, res: Response) {
