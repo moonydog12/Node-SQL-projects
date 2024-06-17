@@ -1,27 +1,25 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+import UserModel from '../models/User';
 import { UnauthenticatedError } from '../errors';
 
-dotenv.config();
-
-const jwtSecret = process.env.JWT_SECRET as string;
-
 async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  // check header
   const authHeader = req.headers.authorization;
-
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new UnauthenticatedError('No token provided');
+    throw new UnauthenticatedError('Authentication invalid');
   }
+
   const token = authHeader.split(' ')[1];
 
   try {
-    const decodedData = jwt.verify(token, jwtSecret);
-    const { id, username } = decodedData;
-    req.user = { id, username };
+    const payload = jwt.verify(token, process.env.JWT_SECRET as string);
+
+    // attach the user to the job routes
+    req.user = { userId: payload.userId, name: payload.name };
     next();
   } catch (error) {
-    throw new UnauthenticatedError('Not authorized to access this route');
+    throw new UnauthenticatedError('Authentication invalid');
   }
 }
 

@@ -66,8 +66,12 @@ class UserModel {
     );
   }
 
-  static async comparePassword(plainPassword: string, hashedPassword: string) {
-    return bcrypt.compare(plainPassword, hashedPassword);
+  static async comparePassword(
+    candidatePassword: string,
+    userPassword: string,
+  ) {
+    const isMatch = await bcrypt.compare(candidatePassword, userPassword);
+    return isMatch;
   }
 
   static async getAll() {
@@ -89,12 +93,12 @@ class UserModel {
     return res.rows[0];
   }
 
-  // static async findByEmail(email: string) {
-  //   const queryStr = 'SELECT email FROM users WHERE email = $1';
-  //   const values = [email];
-  //   const res = await query(queryStr, values);
-  //   return res.rows[0];
-  // }
+  static async findByEmail(email: string) {
+    const queryStr = 'SELECT * FROM users WHERE email = $1';
+    const values = [email];
+    const res = await query(queryStr, values);
+    return res.rows[0];
+  }
 }
 
 export default UserModel;
