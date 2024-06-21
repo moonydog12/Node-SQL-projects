@@ -4,3 +4,14 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL CHECK (LENGTH(password) >= 6)
   );
+
+
+CREATE TABLE IF NOT EXISTS job (
+  id SERIAL PRIMARY KEY,
+  company VARCHAR(50) NOT NULL,
+  position VARCHAR(100) NOT NULL,
+  status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('interview', 'declined', 'pending')),
+  user_id INTEGER NOT NULL,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

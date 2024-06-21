@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { CustomAPIError } from '../errors';
+import { CustomAPIError, NotFoundError } from '../errors';
 
 function errorHandlerMiddleware(
   err: Error,
